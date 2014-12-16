@@ -85,3 +85,14 @@ sub trim_branch {
     $branch =~ s{\s*$}{};
     return $branch;
 }
+
+=head1 COPYRIGHT
+
+Copyright (c) 2011-2014 Thomas Sibley
+
+=head1 LICENSE
+
+This library is free software; you can redistribute it and/or modify it under
+the GNU General Public License, version 2.
+
+=cut
