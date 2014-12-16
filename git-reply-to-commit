@@ -1,0 +1,84 @@
+#!/usr/bin/env perl
+use strict;
+use warnings;
+
+=head1 NAME
+
+git-reply-to-commit - Easily compose an email reply to a Mullins git commit
+
+=head1 USAGE
+
+Takes a single commit SHA as the first argument.  Your MUA is then opened for
+composing a reply to the quoted commit.
+
+=head1 CONFIGURATION
+
+Requires C<xdg-open> to handle the C<mailto:...> link on all operating systems
+other than "darwin", where C<open> is used instead.
+
+I configure this for tig with:
+
+    bind generic r !git reply-to-commit %(commit)
+
+=cut
+
+use File::Basename qw(basename);
+use URI::Escape qw(uri_escape);
+use URI;
+
+my $sha = shift @ARGV
+    or die "usage: ", basename($0), " commit-sha\n";
+
+my $commit  = join "", map { mailquote($_) } `git show $sha`;
+my $repo    = basename(URI->new(`git config remote.origin.url`)->path, ".git");
+my $branch  = best_branch($sha);
+my $author  = `git log -1 --format='"%aN" <%aE>' $sha`;
+chomp $author;
+
+my $to      = $author;
+my $subject = sprintf "%s branch %s, %s", $repo, $branch, $sha;
+
+my $opener  = $^O eq "darwin" ? "open" : "xdg-open";
+
+exec $opener, sprintf(
+    'mailto:%s?subject=%s&body=%s',
+    map { uri_escape($_) } $to, $subject, $commit
+) or die "Couldn't exec: $!\n";
+
+sub mailquote {
+    my $text = shift;
+    $text =~ s/^/> /mg;
+    return $text;
+}
+
+sub best_branch {
+    my $ref = shift;
+    my @branches = grep { !/HEAD/ }
+                    map { chomp; trim_branch($_) }
+                        `git branch -r --contains $ref`;
+    return "(unknown)" unless @branches;
+
+    if (my @trunks = grep { /^master$/ } @branches) {
+        @branches = sort {
+            return -1 if $a eq 'master';
+            return 1  if $b eq 'master';
+            return $b cmp $a;
+        } @trunks;
+    } else {
+        @branches = grep {not m{^(testing|wip)/}} sort { $b cmp $a } @branches;
+    }
+
+    if (`git describe --all HEAD` =~ m{heads/(.*)} and grep {$1 eq $_} @branches) {
+        return $1;
+    }
+
+    return $branches[0];
+}
+
+sub trim_branch {
+    my $branch = shift;
+    chomp $branch;
+    $branch =~ s{^\s*(origin/)?}{};
+    $branch =~ s{\s*$}{};
+    return $branch;
+}
