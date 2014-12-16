@@ -4,7 +4,7 @@ use warnings;
 
 =head1 NAME
 
-git-reply-to-commit - Easily compose an email reply to a Mullins git commit
+git-reply-to-commit - Easily compose an email reply to a git commit
 
 =head1 USAGE
 
@@ -19,6 +19,9 @@ other than "darwin", where C<open> is used instead.
 I configure this for tig with:
 
     bind generic r !git reply-to-commit %(commit)
+
+which lets me hit "r" to reply to the commit I'm looking at in tig, whether I'm
+viewing the log or a diff.
 
 =cut
 
